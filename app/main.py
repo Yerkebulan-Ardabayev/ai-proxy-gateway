@@ -1,8 +1,16 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from pydantic import BaseModel
 from prometheus_client import make_asgi_app
-from app.metrics import REQUEST_COUNT, REQUEST_LATENCY, CACHE_HITS, CACHE_MISSES, TOKENS_USED, ACTIVE_REQUESTS
-import time, hashlib, random
+
+import time
+import hashlib
+import random
+
+from app.metrics import (
+    REQUEST_COUNT, REQUEST_LATENCY,
+    CACHE_HITS, CACHE_MISSES,
+    TOKENS_USED, ACTIVE_REQUESTS
+)
 
 app = FastAPI(title="AI Proxy Gateway", version="0.1.0")
 metrics_app = make_asgi_app()
@@ -11,8 +19,10 @@ app.mount("/metrics", metrics_app)
 request_history = []
 cache = {}
 
+
 class ChatRequest(BaseModel):
     prompt: str
+
 
 class ChatResponse(BaseModel):
     response: str
@@ -20,10 +30,12 @@ class ChatResponse(BaseModel):
     latency_ms: float
     tokens_used: int
 
+
 @app.get("/health")
 def health_check():
     REQUEST_COUNT.labels(method="GET", endpoint="/health", status="200").inc()
     return {"status": "ok"}
+
 
 @app.post("/api/chat", response_model=ChatResponse)
 def chat(request: ChatRequest):
@@ -57,10 +69,12 @@ def chat(request: ChatRequest):
     ACTIVE_REQUESTS.dec()
     return ChatResponse(**record)
 
+
 @app.get("/api/history")
 def get_history():
     REQUEST_COUNT.labels(method="GET", endpoint="/api/history", status="200").inc()
     return {"total": len(request_history), "requests": request_history[-20:]}
+
 
 @app.get("/api/stats")
 def get_stats():
