@@ -1,0 +1,15 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: ai-proxy
+  namespace: ai-proxy
+  labels:
+    release: monitoring
+spec:
+  endpoints:
+  - port: http
+    path: /metrics/
+    interval: 15s
+  selector:
+    matchLabels:
+      app: ai-proxy

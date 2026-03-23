@@ -1,0 +1,35 @@
+prometheus:
+  prometheusSpec:
+    retention: 6h
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+    storageSpec: {}
+    serviceMonitorSelectorNilUsesHelmValues: false
+
+grafana:
+  service:
+    type: NodePort
+    nodePort: 31000
+  adminPassword: admin123
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+
+alertmanager:
+  alertmanagerSpec:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+
+kubeEtcd:
+  enabled: false
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeProxy:
+  enabled: false
