@@ -21,6 +21,9 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - containerPort: {{ .Values.service.targetPort }}
+          env:
+            - name: APP_VERSION
+              value: "v2"
           resources:
             requests:
               memory: {{ .Values.resources.requests.memory }}
