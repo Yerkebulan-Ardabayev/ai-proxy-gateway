@@ -1,0 +1,95 @@
+---
+- name: Setup DevOps VM
+  hosts: local
+  become: yes
+  vars:
+    minikube_version: "1.38.1"
+    kubectl_version: "1.35.3"
+    helm_version: "3.20.1"
+    arch: "arm64"
+
+  tasks:
+    # 1. Базовые пакеты
+    - name: Install base packages
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+          - python3-pip
+          - git
+        state: present
+        update_cache: yes
+
+    # 2. Docker GPG ключ
+    - name: Add Docker GPG key
+      shell: |
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+      args:
+        creates: /usr/share/keyrings/docker-archive-keyring.gpg
+
+    # 3. Docker репозиторий
+    - name: Add Docker repository
+      shell: |
+        echo "deb [arch={{ arch }} signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable" > /etc/apt/sources.list.d/docker.list
+      args:
+        creates: /etc/apt/sources.list.d/docker.list
+
+    # 4. Установка Docker
+    - name: Install Docker
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
+        state: present
+        update_cache: yes
+
+    # 5. Добавить пользователя в группу docker
+    - name: Add user to docker group
+      user:
+        name: "{{ ansible_user_id }}"
+        groups: docker
+        append: yes
+
+    # 6. Kubectl
+    - name: Install kubectl
+      get_url:
+        url: "https://dl.k8s.io/release/v{{ kubectl_version }}/bin/linux/{{ arch }}/kubectl"
+        dest: /usr/local/bin/kubectl
+        mode: "0755"
+
+    # 7. Minikube
+    - name: Install Minikube
+      get_url:
+        url: "https://storage.googleapis.com/minikube/releases/v{{ minikube_version }}/minikube-linux-{{ arch }}"
+        dest: /usr/local/bin/minikube
+        mode: "0755"
+
+    # 8. Helm
+    - name: Install Helm
+      shell: |
+        curl -fsSL https://get.helm.sh/helm-v{{ helm_version }}-linux-{{ arch }}.tar.gz | tar xz -C /tmp
+        mv /tmp/linux-{{ arch }}/helm /usr/local/bin/helm
+        rm -rf /tmp/linux-{{ arch }}
+      args:
+        creates: /usr/local/bin/helm
+
+    # 9. Проверка версий
+    - name: Verify installations
+      shell: "{{ item.cmd }}"
+      loop:
+        - { cmd: "docker --version" }
+        - { cmd: "kubectl version --client --short 2>/dev/null || kubectl version --client" }
+        - { cmd: "minikube version --short" }
+        - { cmd: "helm version --short" }
+      register: versions
+      changed_when: false
+
+    - name: Show versions
+      debug:
+        msg: "{{ item.stdout_lines }}"
+      loop: "{{ versions.results }}"
